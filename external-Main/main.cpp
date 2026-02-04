@@ -1,101 +1,72 @@
-#include"mem.h"
-#include"FindProcessID.h"
+//Author : FuzzyYeti757
+//Date   : 2026-02-24 
+//Description : Review how external hackwork
+
+#include"FindProcessID.h" //All process has it's own unique process id and we need this for gamehacking
 #include"GetBaseModuleAddress.h"
-#include"FindDMAAddy.h"
 #include<iostream>
-int main()
+#include"mem.h"
+
+
+
+
+int main(int argc, char**argv)
 {
-	DWORD ProcessID;
-	uintptr_t BaseModuleAddress;
-	uintptr_t PlayerLocalEntity;
-	uintptr_t PlayerHealthAddress;
-	bool UseRecoil = false;
-	bool InfintyBollet = false;
-	bool InfintyHealth = false;
-
-	ProcessID = FindProcessID(L"ac_client.exe");
-	if (ProcessID != NULL)
+	DWORD ProcessID = FindProcessID(L"ac_client.exe");
+	std::cout << "Process ID is " << ProcessID << '\n';
+	bool brecoil = false;
+	if (ProcessID == 0)
 	{
-
-		std::cout << "Process ID : " << ProcessID << '\n';
-
-		HANDLE Hprocess = OpenProcess(PROCESS_ALL_ACCESS, false, ProcessID);
-				
-
-		BaseModuleAddress = GetBaseModuleAddress(ProcessID, L"ac_client.exe");
+		std::cout << "Can't find your process id " << '\n';
 		
-		std::cout << "Base Moudle Address : " <<std::hex << BaseModuleAddress << '\n';
+	}
 
-		PlayerLocalEntity = BaseModuleAddress + 0x10F4F4;
-		std::cout << std::hex << "Player Entity Pointer Address " << PlayerLocalEntity << '\n';
+	else
+	{
+		uintptr_t BaseModuleAdress = GetBaseModuleAddress(ProcessID, L"ac_client.exe");
 
-		PlayerHealthAddress = FindDMAAddy(Hprocess, PlayerLocalEntity, { 0xF8 });
-		std::cout << std::hex << "Player Health Address " << PlayerHealthAddress << '\n';
+		std::cout << "Your Base Module Address is " << std::hex << BaseModuleAdress << '\n';
 
-		DWORD exit;
-		while (GetExitCodeProcess(Hprocess, &exit) && exit == STILL_ACTIVE)
+		uintptr_t PlayerLocalEntity = BaseModuleAdress + 0x10F4F4;
+
+		std::cout << "Your Player Local Entity is  " << std::hex << PlayerLocalEntity << '\n';
+
+		HANDLE hProcess = OpenProcess(PROCESS_ALL_ACCESS,false,ProcessID);
+
+
+		uintptr_t RecoilFunctionStart = BaseModuleAdress + 0x62020;
+		uintptr_t RecoilFunctionCaller = BaseModuleAdress + 0x63786;
+
+
+
+		DWORD dwexit = 0;
+		while (GetExitCodeProcess(hProcess,&dwexit) && dwexit==STILL_ACTIVE )
 		{
 			if (GetAsyncKeyState(VK_NUMPAD7)&1)
 			{
-				UseRecoil = !UseRecoil;
-				if (UseRecoil==false)
+				brecoil = !brecoil;
+				if (brecoil == true)
 				{
-					std::cout << "Not Use No Recoil Hack " << '\n';
-					mem::PatchEX((BYTE*)(BaseModuleAddress + 0x63786), (BYTE*)"\x50\x8D\x4C\x24\x1C\x51\x8B\xCE\xFF\xD2", 10, Hprocess);
+					std::cout << "Recoil hacks on " << '\n';
+					mem::NopEX((BYTE*)RecoilFunctionCaller,10,hProcess);
 				}
-				else
+				if (brecoil == false)
 				{
-					std::cout << "Use Recoil Hack " << '\n';
-					mem::NopEX((BYTE*)(BaseModuleAddress + 0x63786), 10, Hprocess);
-				}
+					std::cout << "Recoil hack off " << '\n';
+					mem::PatchEX((BYTE*)RecoilFunctionCaller,(BYTE*)"\x50\x8D\x4C\x24\x1C\x51\x8B\xCE\xFF\xD2", 10, hProcess);
 
-			}
-
-			if (GetAsyncKeyState(VK_NUMPAD8) & 1)
-			{
-				InfintyBollet = !InfintyBollet;
-				if (InfintyBollet == false)
-				{
-					std::cout << "Not Use Infinity Ammo Hack " << '\n';
-					mem::PatchEX((BYTE*)(BaseModuleAddress + 0x637E9), (BYTE*)"\xFF\x0E", 2, Hprocess);
-				}
-				else
-				{
-					std::cout << " Use Infinity Ammo Hack " << '\n';
-					mem::NopEX((BYTE*)(BaseModuleAddress + 0x637E9), 2, Hprocess);
-				}
-
-			}
-
-
-			if (GetAsyncKeyState(VK_NUMPAD9) & 1)
-			{
-				InfintyHealth = !InfintyHealth;
-				if (InfintyHealth == true)
-				{
-					std::cout << "Use Infinity Health Hack " << '\n';
-				}
-				else
-				{
-					std::cout << "Not Use Infinity Health Hack " << '\n';
 				}
 				
+				
 			}
-			int health = 999;
-			if (InfintyHealth == true)
-			{
-				mem::PatchEX((BYTE*)(PlayerHealthAddress),(BYTE*)&health, sizeof(health), Hprocess);
-			}
-			Sleep(10);
+
+
 		}
-
-
+			
 	}
-	else
-	{
-		std::cout << "Can't find Process ID of ac_client.exe " << '\n';
-	}
+
 
 	return 0;
-}
 
+
+}
