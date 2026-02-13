@@ -28,7 +28,6 @@ DWORD WINAPI HackThread(HMODULE hModule)
 
     uintptr_t AmmoDecreaseFunction = BaseModuleAddress + 0x637E9;
     jumpback = (DWORD)AmmoDecreaseFunction + 11;
-    Hook((void*)AmmoDecreaseFunction, increase_bullet_when_you_shoot, 11);
 
 
 
@@ -51,12 +50,8 @@ DWORD WINAPI HackThread(HMODULE hModule)
 
 
 
-
-
-
-
     fclose(f);
-   // FreeConsole();
+    FreeConsole();
     FreeLibraryAndExitThread(hModule,0);
 
 
